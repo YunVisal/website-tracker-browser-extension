@@ -1,35 +1,41 @@
 import { useState } from 'react';
-import reactLogo from '@/assets/react.svg';
-import wxtLogo from '/wxt.svg';
+import { Button, Group, ScrollArea, Stack, TextInput } from '@mantine/core';
+import { useForm } from '@mantine/form';
 import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [blockedUrl, setBlockedUrl] = useState<string[]>([]);
 
-  return (
-    <>
-      <div>
-        <a href="https://wxt.dev" target="_blank">
-          <img src={wxtLogo} className="logo" alt="WXT logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>WXT + React (1)</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the WXT and React logos to learn more
-      </p>
-    </>
-  );
+  const form = useForm({
+    mode: 'controlled',
+    initialValues: { url: '' }
+  })
+
+  const submit = (values: ({ url: string })) => {
+    setBlockedUrl([...blockedUrl, values.url]);
+  }
+
+  return <div>
+    <form onSubmit={form.onSubmit(submit)}>
+      <Group align="flex-end" wrap="nowrap">
+        <TextInput
+          withAsterisk
+          label="URL"
+          placeholder="example.com"
+          style={{ flex: 1 }}
+          key={form.key('url')}
+          {...form.getInputProps('url')}
+        />
+        <Button type="submit">Block</Button>
+      </Group>
+    </form>
+    {blockedUrl.length > 0 ? <Stack gap={0}>
+      <p>Block urls:</p>
+      <ScrollArea.Autosize mah={250}>
+        {blockedUrl.map(url => <p>{url}</p>)}
+      </ScrollArea.Autosize>
+    </Stack> : <p>No any blocked url</p>}
+  </div>
 }
 
 export default App;

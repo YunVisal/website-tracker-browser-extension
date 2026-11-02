@@ -17,6 +17,9 @@
     "test": "vitest --silent=false"
   },
   "dependencies": {
+    "@mantine/core": "^9.7.4",
+    "@mantine/form": "^9.7.4",
+    "@mantine/hooks": "^9.7.4",
     "punycode": "^2.3.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
@@ -27,6 +30,9 @@
     "@types/react-dom": "^19.2.3",
     "@wxt-dev/module-react": "^1.1.5",
     "eslint": "^9.39.5",
+    "postcss": "^8.5.32",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.0.5",
