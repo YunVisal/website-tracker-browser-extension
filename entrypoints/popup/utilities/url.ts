@@ -1,4 +1,3 @@
-import { error } from "console";
 import punycode from "punycode";
 
 const ALLOWED_PROTOCOL = ["https", "http"];
