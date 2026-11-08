@@ -1,41 +1,96 @@
-import { useState } from 'react';
-import { Button, Group, ScrollArea, Stack, TextInput } from '@mantine/core';
-import { useForm } from '@mantine/form';
+import { useEffect, useMemo, useState } from 'react';
+import { DashboardHeader, CurrentTabPanel, DomainEntryForm, BlockedSitesToolbar } from './components/molecules';
+import { BlockedSitesList } from './components/organisms/BlockedSitesList';
+import type { BlockedSite } from './components/types';
+import { checkDuplicate } from './utilities/storage';
+import { normalizeDomain } from './utilities/url';
 import './App.css';
 
 function App() {
-  const [blockedUrl, setBlockedUrl] = useState<string[]>([]);
+  const [blockedSites, setBlockedSites] = useState<BlockedSite[]>([]);
+  const [currentUrl, setCurrentUrl] = useState('');
+  const [domainInput, setDomainInput] = useState('');
+  const [filter, setFilter] = useState('');
+  const [error, setError] = useState<string>();
+  const [shieldEnabled, setShieldEnabled] = useState(true);
 
-  const form = useForm({
-    mode: 'controlled',
-    initialValues: { url: '' }
-  })
+  useEffect(() => {
+    browser.tabs
+      .query({ active: true, currentWindow: true })
+      .then(([tab]) => setCurrentUrl(tab?.url ?? ''))
+      .catch(() => setCurrentUrl(''));
+  }, []);
 
-  const submit = (values: ({ url: string })) => {
-    setBlockedUrl([...blockedUrl, values.url]);
-  }
+  const currentDomain = useMemo(() => {
+    if (!currentUrl) return '';
+    try {
+      return normalizeDomain(currentUrl);
+    } catch {
+      return '';
+    }
+  }, [currentUrl]);
 
-  return <div>
-    <form onSubmit={form.onSubmit(submit)}>
-      <Group align="flex-end" wrap="nowrap">
-        <TextInput
-          withAsterisk
-          label="URL"
-          placeholder="example.com"
-          style={{ flex: 1 }}
-          key={form.key('url')}
-          {...form.getInputProps('url')}
+  const filteredSites = blockedSites.filter(({ domain }) =>
+    domain.includes(filter.trim().toLowerCase()),
+  );
+
+  const addDomain = (value: string) => {
+    try {
+      const domain = normalizeDomain(value);
+      const duplicate = checkDuplicate(domain, blockedSites.map((site) => site.domain));
+      if (!duplicate.ok) {
+        setError(duplicate.error);
+        return;
+      }
+
+      setBlockedSites((sites) => [...sites, { domain, paused: false, attempts: 0 }]);
+      setDomainInput('');
+      setError(undefined);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to add this website');
+    }
+  };
+
+  const togglePaused = (domain: string) => {
+    setBlockedSites((sites) =>
+      sites.map((site) => site.domain === domain ? { ...site, paused: !site.paused } : site),
+    );
+  };
+
+  return (
+    <main className="popup-shell">
+      <DashboardHeader shieldEnabled={shieldEnabled} onShieldChange={setShieldEnabled} />
+      <CurrentTabPanel
+        shieldEnabled={shieldEnabled}
+        domain={currentDomain}
+        onBlock={() => addDomain(currentDomain)}
+      />
+      <DomainEntryForm
+        value={domainInput}
+        error={error}
+        onValueChange={(value) => {
+          setDomainInput(value);
+          if (error) setError(undefined);
+        }}
+        onSubmit={() => addDomain(domainInput)}
+      />
+
+      <section className="sites-section" aria-labelledby="blocked-sites-heading">
+        <BlockedSitesToolbar
+          count={blockedSites.length}
+          filter={filter}
+          onFilterChange={setFilter}
         />
-        <Button type="submit">Block</Button>
-      </Group>
-    </form>
-    {blockedUrl.length > 0 ? <Stack gap={0}>
-      <p>Block urls:</p>
-      <ScrollArea.Autosize mah={250}>
-        {blockedUrl.map(url => <p>{url}</p>)}
-      </ScrollArea.Autosize>
-    </Stack> : <p>No any blocked url</p>}
-  </div>
+        <BlockedSitesList
+          sites={filteredSites}
+          filter={filter}
+          onPauseToggle={togglePaused}
+          onFilter={setFilter}
+          onRemove={(domain) => setBlockedSites((sites) => sites.filter((site) => site.domain !== domain))}
+        />
+      </section>
+    </main>
+  );
 }
 
 export default App;
