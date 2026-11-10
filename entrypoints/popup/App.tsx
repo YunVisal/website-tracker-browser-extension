@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DashboardHeader, CurrentTabPanel, DomainEntryForm, BlockedSitesToolbar } from './components/molecules';
 import { BlockedSitesList } from './components/organisms/BlockedSitesList';
 import type { BlockedSite } from './components/types';
-import { checkDuplicate } from './utilities/storage';
+import { blockedSitesStorage } from './utilities/blockedSitesStorage';
+import {
+  checkDuplicate,
+  removeBlockedSite,
+  toggleBlockedSitePaused,
+} from './utilities/storage';
 import { normalizeDomain } from './utilities/url';
 import './App.css';
 
@@ -13,6 +18,27 @@ function App() {
   const [filter, setFilter] = useState('');
   const [error, setError] = useState<string>();
   const [shieldEnabled, setShieldEnabled] = useState(true);
+  const [storageReady, setStorageReady] = useState(false);
+  const blockedSitesRef = useRef<BlockedSite[]>([]);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    let active = true;
+    blockedSitesStorage.getValue()
+      .then((sites) => {
+        if (!active) return;
+        blockedSitesRef.current = sites;
+        setBlockedSites(sites);
+        setStorageReady(true);
+      })
+      .catch(() => {
+        if (active) setError('Unable to load blocked websites');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     browser.tabs
@@ -34,16 +60,27 @@ function App() {
     domain.includes(filter.trim().toLowerCase()),
   );
 
+  const saveBlockedSites = (sites: BlockedSite[]) => {
+    blockedSitesRef.current = sites;
+    setBlockedSites(sites);
+    saveQueueRef.current = saveQueueRef.current
+      .then(() => blockedSitesStorage.setValue(sites))
+      .catch(() => setError('Unable to save blocked websites'));
+  };
+
   const addDomain = (value: string) => {
+    if (!storageReady) return;
+
     try {
       const domain = normalizeDomain(value);
-      const duplicate = checkDuplicate(domain, blockedSites.map((site) => site.domain));
+      const currentSites = blockedSitesRef.current;
+      const duplicate = checkDuplicate(domain, currentSites.map((site) => site.domain));
       if (!duplicate.ok) {
         setError(duplicate.error);
         return;
       }
 
-      setBlockedSites((sites) => [...sites, { domain, paused: false, attempts: 0 }]);
+      saveBlockedSites([...currentSites, { domain, paused: false }]);
       setDomainInput('');
       setError(undefined);
     } catch (caught) {
@@ -52,9 +89,8 @@ function App() {
   };
 
   const togglePaused = (domain: string) => {
-    setBlockedSites((sites) =>
-      sites.map((site) => site.domain === domain ? { ...site, paused: !site.paused } : site),
-    );
+    if (!storageReady) return;
+    saveBlockedSites(toggleBlockedSitePaused(blockedSitesRef.current, domain));
   };
 
   return (
@@ -63,11 +99,13 @@ function App() {
       <CurrentTabPanel
         shieldEnabled={shieldEnabled}
         domain={currentDomain}
+        disabled={!storageReady}
         onBlock={() => addDomain(currentDomain)}
       />
       <DomainEntryForm
         value={domainInput}
         error={error}
+        disabled={!storageReady}
         onValueChange={(value) => {
           setDomainInput(value);
           if (error) setError(undefined);
@@ -86,7 +124,9 @@ function App() {
           filter={filter}
           onPauseToggle={togglePaused}
           onFilter={setFilter}
-          onRemove={(domain) => setBlockedSites((sites) => sites.filter((site) => site.domain !== domain))}
+          onRemove={(domain) => {
+            if (storageReady) saveBlockedSites(removeBlockedSite(blockedSitesRef.current, domain));
+          }}
         />
       </section>
     </main>

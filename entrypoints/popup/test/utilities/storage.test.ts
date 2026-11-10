@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkDuplicate } from "../../utilities/storage";
+import { checkDuplicate, removeBlockedSite, toggleBlockedSitePaused } from "../../utilities/storage";
 import { normalizeDomain } from "../../utilities/url";
 
 describe('checkDuplicate', () => {
@@ -31,5 +31,25 @@ describe('checkDuplicate', () => {
             ok: true,
             error: ""
         });
+    });
+});
+
+describe('blocked site updates', () => {
+    const sites = [
+        { domain: 'example.com', paused: false },
+        { domain: 'other.com', paused: true },
+    ];
+
+    it('toggles only the matching site pause state', () => {
+        expect(toggleBlockedSitePaused(sites, 'example.com')).toEqual([
+            { domain: 'example.com', paused: true },
+            { domain: 'other.com', paused: true },
+        ]);
+    });
+
+    it('removes only the matching site', () => {
+        expect(removeBlockedSite(sites, 'example.com')).toEqual([
+            { domain: 'other.com', paused: true },
+        ]);
     });
 });

@@ -78,9 +78,10 @@ type DomainFieldProps = {
     onChange: (value: string) => void;
     onSubmit: () => void;
     error?: string;
+    disabled?: boolean;
 };
 
-export function DomainInput({ value, onChange, error }: Omit<DomainFieldProps, 'onSubmit'>) {
+export function DomainInput({ value, onChange, error, disabled }: Omit<DomainFieldProps, 'onSubmit'>) {
     return (
         <TextInput
             className="domain-input"
@@ -90,6 +91,7 @@ export function DomainInput({ value, onChange, error }: Omit<DomainFieldProps, '
             aria-label="Website URL or domain to block"
             leftSection={<Link2 size={16} aria-hidden="true" />}
             error={error}
+            disabled={disabled}
             autoComplete="url"
         />
     );
@@ -139,25 +141,18 @@ export function DomainName({ children }: DomainNameProps) {
     return <Text className="domain-name">{children}</Text>;
 }
 
-type AttemptCountProps = {
-    count: number;
-};
-
-export function AttemptCount({ count }: AttemptCountProps) {
-    return <Text className="attempt-count">{count} attempts intercepted</Text>;
-}
-
 type PrimaryActionProps = {
     children: ReactNode;
     onClick?: () => void;
     disabled?: boolean;
+    type?: 'button' | 'submit';
     color?: string;
     tone?: 'primary' | 'danger';
 };
 
-export function PrimaryAction({ children, onClick, disabled, color = 'emerald', tone = 'primary' }: PrimaryActionProps) {
+export function PrimaryAction({ children, onClick, disabled, type = 'button', color = 'emerald', tone = 'primary' }: PrimaryActionProps) {
     return (
-        <Button className={`primary-action primary-action--${tone}`} color={color} onClick={onClick} disabled={disabled}>
+        <Button type={type} className={`primary-action primary-action--${tone}`} color={color} onClick={onClick} disabled={disabled}>
             {children}
         </Button>
     );

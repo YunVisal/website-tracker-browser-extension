@@ -1,7 +1,6 @@
 import { Group, Paper, Text } from '@mantine/core';
-import { Clock3, Globe2, Pause, Plus, Search, Shield, Trash2 } from 'lucide-react';
+import { Globe2, Pause, Play, Plus, Shield, Trash2 } from 'lucide-react';
 import {
-    AttemptCount,
     BrandMark,
     CountBadge,
     DomainInput,
@@ -39,10 +38,11 @@ export function DashboardHeader({ shieldEnabled, onShieldChange }: DashboardHead
 type CurrentTabPanelProps = {
     shieldEnabled: boolean;
     domain: string;
+    disabled?: boolean;
     onBlock: () => void;
 };
 
-export function CurrentTabPanel({ shieldEnabled, domain, onBlock }: CurrentTabPanelProps) {
+export function CurrentTabPanel({ shieldEnabled, domain, disabled = false, onBlock }: CurrentTabPanelProps) {
     return (
         <Paper className={`shield-panel${shieldEnabled ? ' shield-panel--active' : ' shield-panel--paused'}`}>
             <Group className="shield-panel__heading" justify="space-between">
@@ -60,7 +60,7 @@ export function CurrentTabPanel({ shieldEnabled, domain, onBlock }: CurrentTabPa
                         {domain || 'No website detected'}
                     </Text>
                 </div>
-                <PrimaryAction tone="danger" disabled={!domain} onClick={onBlock}>
+                <PrimaryAction tone="danger" disabled={!domain || disabled} onClick={onBlock}>
                     <Shield size={16} aria-hidden="true" />
                     Block tab
                 </PrimaryAction>
@@ -72,11 +72,12 @@ export function CurrentTabPanel({ shieldEnabled, domain, onBlock }: CurrentTabPa
 type DomainEntryFormProps = {
     value: string;
     error?: string;
+    disabled?: boolean;
     onValueChange: (value: string) => void;
     onSubmit: () => void;
 };
 
-export function DomainEntryForm({ value, error, onValueChange, onSubmit }: DomainEntryFormProps) {
+export function DomainEntryForm({ value, error, disabled = false, onValueChange, onSubmit }: DomainEntryFormProps) {
     return (
         <form
             className="domain-entry"
@@ -85,8 +86,8 @@ export function DomainEntryForm({ value, error, onValueChange, onSubmit }: Domai
                 onSubmit();
             }}
         >
-            <DomainInput value={value} onChange={onValueChange} error={error} />
-            <PrimaryAction>
+            <DomainInput value={value} onChange={onValueChange} error={error} disabled={disabled} />
+            <PrimaryAction type="submit" disabled={disabled}>
                 <Plus size={18} aria-hidden="true" />
                 Block
             </PrimaryAction>
@@ -120,26 +121,20 @@ type BlockedSiteRowProps = {
 };
 
 export function BlockedSiteRow({ site, onPauseToggle, onFilter, onRemove }: BlockedSiteRowProps) {
-    const { domain, paused, attempts } = site;
+    const { domain, paused } = site;
 
     return (
         <Paper className="site-row" role="listitem">
             <SiteTile domain={domain} />
             <div className="site-row__info">
                 <DomainName>{domain}</DomainName>
-                <AttemptCount count={attempts} />
             </div>
             <div className="site-row__actions">
                 <IconAction
-                    icon={paused ? <Clock3 size={17} /> : <Pause size={17} />}
+                    icon={paused ? <Play size={17} /> : <Pause size={17} />}
                     label={paused ? `Resume ${domain}` : `Pause ${domain}`}
                     tone={paused ? 'warning' : 'default'}
                     onClick={() => onPauseToggle(domain)}
-                />
-                <IconAction
-                    icon={<Search size={17} />}
-                    label={`Filter by ${domain}`}
-                    onClick={() => onFilter(domain)}
                 />
                 <IconAction
                     icon={<Trash2 size={17} />}
