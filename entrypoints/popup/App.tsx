@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DashboardHeader, CurrentTabPanel, DomainEntryForm, BlockedSitesToolbar } from './components/molecules';
+import {
+  BlockedSitesToolbar,
+  CurrentTabPanel,
+  DashboardHeader,
+  DomainEntryForm,
+} from './components/molecules';
 import { BlockedSitesList } from './components/organisms/BlockedSitesList';
 import type { BlockedSite } from './components/types';
 import { blockedSitesStorage } from './utilities/blockedSitesStorage';
+import { shieldEnabledStorage } from './utilities/shieldStorage';
 import {
   checkDuplicate,
   removeBlockedSite,
@@ -57,6 +63,29 @@ function App() {
       .catch(() => setCurrentUrl(''));
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    let storageChanged = false;
+    const unwatch = shieldEnabledStorage.watch((enabled) => {
+      if (!active) return;
+      storageChanged = true;
+      setShieldEnabled(enabled);
+    });
+
+    shieldEnabledStorage.getValue()
+      .then((enabled) => {
+        if (active && !storageChanged) setShieldEnabled(enabled);
+      })
+      .catch(() => {
+        if (active) setError('Unable to load shield state');
+      });
+
+    return () => {
+      active = false;
+      unwatch();
+    };
+  }, []);
+
   const currentDomain = useMemo(() => {
     if (!currentUrl) return '';
     try {
@@ -103,9 +132,21 @@ function App() {
     saveBlockedSites(toggleBlockedSitePaused(blockedSitesRef.current, domain));
   };
 
+  const toggleShield = (enabled: boolean) => {
+    setShieldEnabled(enabled);
+    shieldEnabledStorage.setValue(enabled).catch(() => {
+      setError('Unable to update shield state');
+    });
+  };
+
+  const removeSite = (domain: string) => {
+    if (!storageReady) return;
+    saveBlockedSites(removeBlockedSite(blockedSitesRef.current, domain));
+  };
+
   return (
     <main className="popup-shell">
-      <DashboardHeader shieldEnabled={shieldEnabled} onShieldChange={setShieldEnabled} />
+      <DashboardHeader shieldEnabled={shieldEnabled} onShieldChange={toggleShield} />
       <CurrentTabPanel
         shieldEnabled={shieldEnabled}
         domain={currentDomain}
@@ -134,9 +175,7 @@ function App() {
           filter={filter}
           onPauseToggle={togglePaused}
           onFilter={setFilter}
-          onRemove={(domain) => {
-            if (storageReady) saveBlockedSites(removeBlockedSite(blockedSitesRef.current, domain));
-          }}
+          onRemove={removeSite}
         />
       </section>
     </main>
