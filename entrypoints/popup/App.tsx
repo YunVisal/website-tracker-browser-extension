@@ -24,9 +24,18 @@ function App() {
 
   useEffect(() => {
     let active = true;
+    let storageChanged = false;
+    const unwatch = blockedSitesStorage.watch((sites) => {
+      if (!active) return;
+      storageChanged = true;
+      blockedSitesRef.current = sites;
+      setBlockedSites(sites);
+      setStorageReady(true);
+    });
+
     blockedSitesStorage.getValue()
       .then((sites) => {
-        if (!active) return;
+        if (!active || storageChanged) return;
         blockedSitesRef.current = sites;
         setBlockedSites(sites);
         setStorageReady(true);
@@ -37,6 +46,7 @@ function App() {
 
     return () => {
       active = false;
+      unwatch();
     };
   }, []);
 
