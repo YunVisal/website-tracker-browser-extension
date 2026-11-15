@@ -1,4 +1,4 @@
-import { Group, Paper, Text } from '@mantine/core';
+import { Group, Paper, Text, Tooltip } from '@mantine/core';
 import { Globe2, Pause, Play, Plus, Shield, Trash2 } from 'lucide-react';
 import {
     BrandMark,
@@ -113,6 +113,14 @@ export function BlockedSitesToolbar({ count, filter, onFilterChange }: BlockedSi
     );
 }
 
+export function BlockedSitesLoadError() {
+    return (
+        <Paper className="sites-error" role="alert">
+            <Text id="blocked-sites-heading">Unable to load blocked websites</Text>
+        </Paper>
+    );
+}
+
 type BlockedSiteRowProps = {
     site: BlockedSite;
     onPauseToggle: (domain: string) => void;
@@ -127,7 +135,9 @@ export function BlockedSiteRow({ site, onPauseToggle, onFilter, onRemove }: Bloc
         <Paper className="site-row" role="listitem">
             <SiteTile domain={domain} />
             <div className="site-row__info">
-                <DomainName>{domain}</DomainName>
+                <Tooltip label={domain}>
+                    <span><DomainName>{domain}</DomainName></span>
+                </Tooltip>
             </div>
             <div className="site-row__actions">
                 <IconAction

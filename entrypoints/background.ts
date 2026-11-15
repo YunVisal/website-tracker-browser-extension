@@ -40,22 +40,24 @@ export default defineBackground(() => {
       });
 
       if (shieldEnabled && permittedSites.length) {
-        try {
-          const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
-          if (!activeTab?.id || !activeTab.url) return;
+        const openTabs = await browser.tabs.query({});
+        await Promise.all(openTabs.map(async (tab) => {
+          if (!tab.id || !tab.url || !/^https?:\/\//i.test(tab.url)) return;
 
-          const activeDomain = new URL(activeTab.url).hostname.toLowerCase().replace(/\.$/, '');
-          const isBlocked = permittedSites.some(({ domain }) =>
-            siteMatchesBlockedDomain(activeDomain, domain),
-          );
-          if (isBlocked) {
+          try {
+            const tabDomain = new URL(tab.url).hostname.toLowerCase().replace(/\.$/, '');
+            const isBlocked = permittedSites.some(({ domain }) =>
+              siteMatchesBlockedDomain(tabDomain, domain),
+            );
+            if (!isBlocked) return;
+
             const blockedPageUrl = new URL(browser.runtime.getURL('/blocked.html'));
-            blockedPageUrl.searchParams.set('url', activeTab.url);
-            await browser.tabs.update(activeTab.id, { url: blockedPageUrl.toString() });
+            blockedPageUrl.searchParams.set('url', tab.url);
+            await browser.tabs.update(tab.id, { url: blockedPageUrl.toString() });
+          } catch (error) {
+            console.warn(`Unable to redirect tab ${tab.id} to the blocked page`, error);
           }
-        } catch (error) {
-          console.warn('Unable to redirect the current tab to the blocked page', error);
-        }
+        }));
       }
     }).catch((error: unknown) => {
       console.error('Unable to update FocusShield blocking rules', error);

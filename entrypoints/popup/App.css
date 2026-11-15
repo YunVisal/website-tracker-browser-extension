@@ -311,6 +311,19 @@
     overflow: hidden;
 }
 
+.sites-error {
+    display: grid;
+    flex: 1 1 0;
+    min-height: 0;
+    place-items: center;
+    padding: 16px;
+    border: 1px solid rgb(255 120 134 / 24%);
+    border-radius: 6px;
+    background: rgb(255 120 134 / 6%);
+    color: var(--popup-red);
+    text-align: center;
+}
+
 .sites-toolbar {
     min-height: 34px;
 }

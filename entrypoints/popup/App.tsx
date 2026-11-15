@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BlockedSitesLoadError,
   BlockedSitesToolbar,
   CurrentTabPanel,
   DashboardHeader,
@@ -25,6 +26,7 @@ function App() {
   const [error, setError] = useState<string>();
   const [shieldEnabled, setShieldEnabled] = useState(true);
   const [storageReady, setStorageReady] = useState(false);
+  const [blockedSitesLoadError, setBlockedSitesLoadError] = useState(false);
   const blockedSitesRef = useRef<BlockedSite[]>([]);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
@@ -36,6 +38,7 @@ function App() {
       storageChanged = true;
       blockedSitesRef.current = sites;
       setBlockedSites(sites);
+      setBlockedSitesLoadError(false);
       setStorageReady(true);
     });
 
@@ -44,10 +47,11 @@ function App() {
         if (!active || storageChanged) return;
         blockedSitesRef.current = sites;
         setBlockedSites(sites);
+        setBlockedSitesLoadError(false);
         setStorageReady(true);
       })
       .catch(() => {
-        if (active) setError('Unable to load blocked websites');
+        if (active && !storageChanged) setBlockedSitesLoadError(true);
       });
 
     return () => {
@@ -119,7 +123,7 @@ function App() {
         return;
       }
 
-      saveBlockedSites([...currentSites, { domain, paused: false }]);
+      saveBlockedSites([{ domain, paused: false }, ...currentSites]);
       setDomainInput('');
       setError(undefined);
     } catch (caught) {
@@ -165,18 +169,24 @@ function App() {
       />
 
       <section className="sites-section" aria-labelledby="blocked-sites-heading">
-        <BlockedSitesToolbar
-          count={blockedSites.length}
-          filter={filter}
-          onFilterChange={setFilter}
-        />
-        <BlockedSitesList
-          sites={filteredSites}
-          filter={filter}
-          onPauseToggle={togglePaused}
-          onFilter={setFilter}
-          onRemove={removeSite}
-        />
+        {blockedSitesLoadError ? (
+          <BlockedSitesLoadError />
+        ) : (
+          <>
+            <BlockedSitesToolbar
+              count={blockedSites.length}
+              filter={filter}
+              onFilterChange={setFilter}
+            />
+            <BlockedSitesList
+              sites={filteredSites}
+              filter={filter}
+              onPauseToggle={togglePaused}
+              onFilter={setFilter}
+              onRemove={removeSite}
+            />
+          </>
+        )}
       </section>
     </main>
   );
