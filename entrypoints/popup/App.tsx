@@ -8,13 +8,18 @@ import {
 } from './components/molecules';
 import { BlockedSitesList } from './components/organisms/BlockedSitesList';
 import type { BlockedSite } from './components/types';
-import { blockedSitesStorage } from './utilities/blockedSitesStorage';
+import {
+  blockedSitesStorage,
+  completePendingBlockedSite,
+  pendingBlockedSiteStorage,
+} from './utilities/blockedSitesStorage';
 import { shieldEnabledStorage } from './utilities/shieldStorage';
 import {
   checkDuplicate,
   removeBlockedSite,
   toggleBlockedSitePaused,
 } from './utilities/storage';
+import { getHostPermissionPattern } from './utilities/blockingRules';
 import { normalizeDomain } from './utilities/url';
 import './App.css';
 
@@ -111,7 +116,7 @@ function App() {
       .catch(() => setError('Unable to save blocked websites'));
   };
 
-  const addDomain = (value: string) => {
+  const addDomain = async (value: string) => {
     if (!storageReady) return;
 
     try {
@@ -123,7 +128,23 @@ function App() {
         return;
       }
 
-      saveBlockedSites([{ domain, paused: false }, ...currentSites]);
+      const origin = getHostPermissionPattern(domain);
+      const pendingWrite = pendingBlockedSiteStorage.setValue(domain);
+      const permissionRequest = browser.permissions.request({ origins: [origin] });
+      await pendingWrite;
+      const granted = await permissionRequest;
+      if (!granted) {
+        await pendingBlockedSiteStorage.setValue('');
+        setError(`Permission was not granted for ${domain}`);
+        return;
+      }
+
+      const addedDomain = await completePendingBlockedSite(domain);
+      if (!addedDomain) {
+        setError(`Unable to add ${domain} to the block list`);
+        return;
+      }
+
       setDomainInput('');
       setError(undefined);
     } catch (caught) {

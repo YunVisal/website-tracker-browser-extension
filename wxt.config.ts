@@ -6,7 +6,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react', '@wxt-dev/auto-icons'],
   manifest: {
     permissions: ['activeTab', 'storage', 'declarativeNetRequestWithHostAccess'],
-    host_permissions: ['<all_urls>'],
+    optional_host_permissions: ['*://*/*'],
     web_accessible_resources: [
       {
         resources: ['blocked.html'],

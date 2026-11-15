@@ -1,5 +1,8 @@
 import type { BlockedSite } from './popup/components/types';
-import { blockedSitesStorage } from './popup/utilities/blockedSitesStorage';
+import {
+  blockedSitesStorage,
+  completePendingBlockedSite,
+} from './popup/utilities/blockedSitesStorage';
 import {
   createBlockingRules,
   getHostPermissionPattern,
@@ -66,7 +69,19 @@ export default defineBackground(() => {
 
   blockedSitesStorage.watch(queueRuleUpdate);
   shieldEnabledStorage.watch(queueRuleUpdate);
-  browser.permissions.onAdded.addListener(queueRuleUpdate);
+  browser.permissions.onAdded.addListener(() => {
+    void completePendingBlockedSite()
+      .then(queueRuleUpdate)
+      .catch((error: unknown) => {
+        console.error('Unable to complete pending blocked website', error);
+        queueRuleUpdate();
+      });
+  });
   browser.permissions.onRemoved.addListener(queueRuleUpdate);
-  queueRuleUpdate();
+  void completePendingBlockedSite()
+    .then(queueRuleUpdate)
+    .catch((error: unknown) => {
+      console.error('Unable to recover pending blocked website', error);
+      queueRuleUpdate();
+    });
 });
