@@ -5,6 +5,9 @@ export default defineConfig({
   manifestVersion: 3,
   modules: ['@wxt-dev/module-react', '@wxt-dev/auto-icons'],
   manifest: {
+    name: "FocusShield",
+    version: "1.0.0",
+    description: "Block distracting websites and stay focused.",
     permissions: ['activeTab', 'storage', 'declarativeNetRequestWithHostAccess'],
     optional_host_permissions: ['*://*/*'],
     web_accessible_resources: [
